@@ -76,12 +76,16 @@ pub fn read_code_template_content() -> Result<impl BufRead, std::io::Error> {
     Ok(io::BufReader::new(file))
 }
 
-pub fn save_backend_code(mut reader: impl BufRead) -> Result<(), std::io::Error> {
-    let file = File::create(EXEC_MAIN_PATH)?;
-    let mut writer = BufWriter::new(file);
+pub fn read_exec_main_contents() -> Result<impl BufRead, std::io::Error> {
+    let file = File::open(EXEC_MAIN_PATH)?;
 
-    io::copy(&mut reader, &mut writer)?;
-    writer.flush()?;
+    Ok(io::BufReader::new(file))
+}
+
+pub fn save_backend_code(content: &str) -> Result<(), std::io::Error> {
+    let mut file = File::create(EXEC_MAIN_PATH)?;
+    file.write_all(content.as_bytes())?;
+    file.flush()?;
 
     Ok(())
 }

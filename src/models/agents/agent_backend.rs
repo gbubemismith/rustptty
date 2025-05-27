@@ -1,8 +1,13 @@
 use std::io::Read;
 
 use crate::{
-    ai_functions::aifunc_backend::print_backend_webserver_code,
-    helpers::general::{perfom_ai_call, read_code_template_content},
+    ai_functions::aifunc_backend::{
+        print_backend_webserver_code, print_fixed_code, print_improved_webserver_code,
+        print_rest_api_endpoints,
+    },
+    helpers::general::{
+        perfom_ai_call, read_code_template_content, read_exec_main_contents, save_backend_code,
+    },
     models::agent_basic::basic_agent::{AgentState, BasicAgent},
 };
 
@@ -50,5 +55,65 @@ impl AgentBackendDeveloper {
             print_backend_webserver_code,
         )
         .await;
+
+        save_backend_code(&response).expect("Failed to save backend code");
+        factsheet.backend_code = Some(response);
+    }
+
+    async fn call_improved_backend_code(&mut self, factsheet: &mut FactSheet) {
+        let msg_context = format!(
+            "CODE_TEMPLATE : {:?} \n PROJECT_DESCRIPTION: {:?} \n",
+            factsheet.backend_code, factsheet
+        );
+
+        let response = perfom_ai_call(
+            msg_context,
+            &self.attributes.position,
+            get_function_string!(print_improved_webserver_code),
+            print_improved_webserver_code,
+        )
+        .await;
+
+        save_backend_code(&response).expect("Failed to save backend code");
+        factsheet.backend_code = Some(response);
+    }
+
+    async fn call_fix_code_bugs(&mut self, factsheet: &mut FactSheet) {
+        let msg_context = format!(
+            "BROKEN_CODE : {:?} \n ERROR_BUGS: {:?} \n
+            THIS FUNCTION ONLY OUTPUTS CODE. JUST OUTPUT THE CODE",
+            factsheet.backend_code, self.bug_errors
+        );
+
+        let response = perfom_ai_call(
+            msg_context,
+            &self.attributes.position,
+            get_function_string!(print_fixed_code),
+            print_fixed_code,
+        )
+        .await;
+
+        save_backend_code(&response).expect("Failed to save backend code");
+        factsheet.backend_code = Some(response);
+    }
+
+    async fn call_extract_rest_api_endpoints(&self) -> String {
+        let mut exec_content = String::new();
+        read_exec_main_contents()
+            .expect("Failed to open exec main contents")
+            .read_to_string(&mut exec_content)
+            .expect("Failed to read exec main contents");
+
+        let msg_context = format!("CODE INPUT: {}", exec_content);
+
+        let response = perfom_ai_call(
+            msg_context,
+            &self.attributes.position,
+            get_function_string!(print_rest_api_endpoints),
+            print_rest_api_endpoints,
+        )
+        .await;
+
+        response
     }
 }
